@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Member Dashboard - Scholarship Portal</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        padding: 2rem;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      .btn {
+        padding: 10px 20px;
+        margin: 10px;
+        background: #008cba;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Member Dashboard</h1>
+    <p>Welcome, Member! Use the functions below:</p>
+    <button class="btn" onclick="viewScholarships()">View Scholarships</button>
+    <button class="btn" onclick="showApplicationForm()">Apply Now</button>
+    <div id="application-form" style="display: none; margin-top: 20px">
+      <h3>Scholarship Application Form</h3>
+      <form id="scholarshipForm">
+        <div id="app-id-container" style="margin-bottom: 1rem"></div>
+        <br />
+        <input
+          type="number"
+          name="Student_ID"
+          placeholder="Student ID"
+          required
+        /><br /><br />
+        <input
+          type="text"
+          name="Funding_ID"
+          placeholder="Funding ID"
+          required
+        /><br /><br />
+        <input
+          type="text"
+          name="Student_Name"
+          placeholder="Full Name"
+          required
+        /><br /><br />
+        <select name="Student_Gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option></select
+        ><br /><br />
+        <input
+          type="number"
+          step="0.01"
+          name="Student_Annual_Income"
+          placeholder="Annual Income"
+        /><br /><br />
+        <input
+          type="number"
+          step="0.01"
+          name="Student_CPI"
+          placeholder="CPI"
+        /><br /><br />
+        <button type="submit" class="btn">Submit Application</button>
+      </form>
+      <div id="apply-message" style="margin-top: 1rem"></div>
+    </div>
+
+    <button class="btn" onclick="toggleStatusForm()">View Status</button>
+
+    <div id="status-container" style="display: none; margin-top: 20px">
+      <h2>Check Application Status</h2>
+
+      <form id="statusForm">
+        <label for="applicationId">Application ID:</label>
+        <input type="text" id="applicationId" name="applicationId" required />
+        <button type="submit">Check Status</button>
+      </form>
+
+      <div id="statusResult" style="margin-top: 20px; font-weight: bold"></div>
+    </div>
+    <button class="btn" onclick="viewProfile()">View Profile</button>
+    <button class="btn" onclick="logout()">Logout</button>
+    <div id="member-content"></div>
+
+    <script>
+      function viewProfile() {
+        const userid = prompt("Enter your User ID to view your profile:");
+
+        if (!userid) {
+          alert("User ID is required!");
+          return;
+        }
+
+        fetch(`/show_profile/${userid}`) // ✅ backticks used
+          .then((res) => {
+            if (!res.ok) throw new Error("Profile not found");
+            return res.text();
+          })
+          .then((html) => {
+            document.getElementById("member-content").innerHTML = html;
+          })
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("member-content").innerHTML =
+              "<p style='color:red;'>Failed to load profile.</p>";
+          });
+      }
+
+      function viewScholarships() {
+        fetch("/show_scholarship")
+          .then((res) => res.text())
+          .then(
+            (html) =>
+              (document.getElementById("member-content").innerHTML = html)
+          )
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("member-content").innerHTML =
+              "<p style='color:red;'>Failed to load scholarships.</p>";
+          });
+      }
+
+      // Toggle function stays the same
+      function toggleStatusForm() {
+        const container = document.getElementById("status-container");
+        container.style.display =
+          container.style.display === "none" ? "block" : "none";
+      }
+
+      // Corrected submit handler
+      document
+        .getElementById("statusForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault(); // ✅ stop page reload
+          showStatus(); // ✅ call the main status function
+        });
+
+      function showStatus() {
+        const appId = document.getElementById("applicationId").value;
+
+        fetch(`/application/status?application_id=${appId}`)
+          .then((response) =>
+            response.json().then((data) => {
+              if (!response.ok) {
+                throw new Error(data.error || "Unknown error");
+              }
+              return data;
+            })
+          )
+          .then((data) => {
+            document.getElementById("statusResult").textContent =
+              "Status: " + data.Status;
+          })
+          .catch((error) => {
+            document.getElementById("statusResult").textContent =
+              "Error: " + error.message;
+          });
+      }
+
+      function showApplicationForm() {
+        document.getElementById("application-form").style.display = "block";
+
+        // Fetch and display the generated Application_ID
+        fetch("/generate_app_id")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.Application_ID) {
+              document.getElementById(
+                "app-id-container"
+              ).innerHTML = `<strong>Your Application Number:</strong> ${data.Application_ID}`;
+            } else {
+              document.getElementById(
+                "app-id-container"
+              ).innerHTML = `<p style="color:red;">Failed to get Application Number</p>`;
+            }
+          })
+          .catch((err) => {
+            console.error("Error fetching Application_ID:", err);
+            document.getElementById("app-id-container").innerHTML =
+              "<p style='color:red;'>Error generating application number</p>";
+          });
+      }
+
+      function logout() {
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("role");
+        window.location.href = "/";
+      }
+
+      // 💡 This must be outside so it attaches when the page loads
+      document
+        .getElementById("scholarshipForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(e.target);
+          const payload = Object.fromEntries(formData.entries());
+
+          fetch("/Apply_Scholarship", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              document.getElementById("apply-message").innerHTML = data.message
+                ? `<p style='color:green;'>${data.message}</p>`
+                : `<p style='color:red;'>${data.error}</p>`;
+            })
+            .catch((err) => {
+              console.error("Application error:", err);
+              document.getElementById("apply-message").innerHTML =
+                "<p style='color:red;'>Submission failed. Try again later.</p>";
+            });
+        });
+    </script>
+  </body>
+</html>

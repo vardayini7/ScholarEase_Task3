@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Scholarship Portal</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .login-container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
+    h1 { text-align: center; margin-bottom: 1rem; }
+    input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 4px; }
+    button { width: 100%; padding: 0.8rem; background-color: #008cba; border: none; color: #fff; border-radius: 4px; margin-top: 1rem; cursor: pointer; }
+    #message { margin-top: 1rem; text-align: center; color: red; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Login</h1>
+    <form id="loginForm">
+      <input type="text" id="member_id" placeholder="Member ID" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Log In</button>
+    </form>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const member_id = document.getElementById("member_id").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const messageDiv = document.getElementById("message");
+      messageDiv.textContent = "";
+      
+      fetch("/authUser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member_id, password })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          messageDiv.textContent = data.error;
+        } else {
+          localStorage.setItem("session_token", data.session_token);
+          localStorage.setItem("role", data.role);
+          if (data.role.toLowerCase() === "admin") {
+            window.location.href = "/admin.html";
+          } else {
+            window.location.href = "/member.html";
+          }
+        }
+      })
+      .catch(error => {
+        console.error("Login error:", error);
+        messageDiv.textContent = "An error occurred. Please try again.";
+      });
+    });
+  </script>
+</body>
+</html>

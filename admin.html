@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Dashboard - Scholarship Portal</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        padding: 2rem;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      .btn {
+        padding: 10px 20px;
+        margin: 10px;
+        background: #008cba;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      table {
+        margin-top: 1rem;
+        width: 100%;
+      }
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid #ccc;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Admin Dashboard</h1>
+    <p>Welcome, Admin! Use the functions below:</p>
+
+    <button class="btn" onclick="getMembers()">View All Members</button>
+    <button class="btn" onclick="viewColleges()">View College Details</button>
+    <button class="btn" onclick="viewBankDetails()">View Bank Details</button>
+    <button class="btn" onclick="viewAlumniDetails()">
+      View Alumni Details
+    </button>
+    <button class="btn" onclick="viewStatsDetails()">View Stats Details</button>
+
+    <!-- Add Member Button -->
+    <button
+      id="show-add-form-btn"
+      onclick="toggleAddForm()"
+      style="
+        padding: 0.5rem 1rem;
+        margin-top: 2rem;
+        background-color: #2ecc71;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      "
+    >
+      Add Member
+    </button>
+
+    <!-- Add Member Form: Hidden by default -->
+    <div id="add-form" style="display: none; margin-top: 1rem">
+      <div>
+        <label>Username:</label>
+        <input type="text" id="add-username" />
+      </div>
+
+      <div>
+        <label>Email:</label>
+        <input type="email" id="add-email" />
+      </div>
+
+      <div>
+        <label>Date of Birth:</label>
+        <input type="date" id="add-dob" />
+      </div>
+
+      <div>
+        <label>Role:</label>
+        <select id="add-role">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Image Link:</label>
+        <input type="text" id="add-image-link" />
+      </div>
+
+      <div>
+        <label>Group ID:</label>
+        <input type="text" id="add-group-id" />
+      </div>
+
+      <div>
+        <button onclick="addMember()">Add Member</button>
+      </div>
+    </div>
+
+    <!-- Update Member -->
+    <button
+      id="show-update-form-btn"
+      onclick="toggleUpdateForm()"
+      style="
+        padding: 0.5rem 1rem;
+        margin-top: 2rem;
+        background-color: #f39c12;
+        color: white;
+        border: none;
+        border-radius: 4px;
+      "
+    >
+      Update Member
+    </button>
+
+    <div id="update-member-form" style="margin-top: 1rem; display: none">
+      <input
+        type="number"
+        id="update-member-id"
+        placeholder="Enter Member ID to update"
+      /><br />
+      <input
+        type="text"
+        id="update-username"
+        placeholder="New Username (leave blank to skip)"
+      /><br />
+      <input
+        type="email"
+        id="update-email"
+        placeholder="New Email (leave blank to skip)"
+      /><br />
+      <input
+        type="date"
+        id="update-dob"
+        placeholder="New Date of Birth"
+      /><br />
+      <button
+        onclick="updateMember()"
+        style="background-color: #d35400; color: white"
+      >
+        Confirm Update
+      </button>
+    </div>
+
+    <!-- Delete Member -->
+    <button
+      id="show-delete-form-btn"
+      onclick="toggleDeleteForm()"
+      style="
+        padding: 0.5rem 1rem;
+        margin-top: 2rem;
+        background-color: #e67e22;
+        color: white;
+        border: none;
+        border-radius: 4px;
+      "
+    >
+      Delete Member
+    </button>
+
+    <div id="delete-member-form" style="margin-top: 1rem; display: none">
+      <input
+        type="number"
+        id="delete-member-id"
+        placeholder="Enter Member ID to delete"
+      />
+      <button
+        onclick="deleteMember()"
+        style="margin-left: 1rem; background-color: #e74c3c; color: white"
+      >
+        Confirm Delete
+      </button>
+    </div>
+
+    <!-- Results Content -->
+    <div id="admin-content" style="margin-top: 2rem"></div>
+
+    <script>
+      const session_token = localStorage.getItem("session_token");
+
+      function getMembers() {
+        fetch("/admin/get_members", {
+          method: "GET",
+          headers: { Authorization: session_token },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            let content = "<h2>Members List</h2>";
+            if (Array.isArray(data)) {
+              content +=
+                "<table><tr><th>ID</th><th>Username</th><th>Email</th><th>Date of Birth</th></tr>";
+              data.forEach((member) => {
+                content += `<tr>
+                  <td>${member.ID}</td>
+                  <td>${member.UserName}</td>
+                  <td>${member.emailID || "N/A"}</td>
+                  <td>${member.DoB || "N/A"}</td>
+                </tr>`;
+              });
+              content += "</table>";
+            } else if (data.error) {
+              content = `<p style="color:red;">${data.error}</p>`;
+            }
+            document.getElementById("admin-content").innerHTML = content;
+          })
+          .catch((err) => {
+            console.error("Error fetching members:", err);
+            document.getElementById("admin-content").innerHTML =
+              "<p style='color:red;'>Failed to load members.</p>";
+          });
+      }
+
+      function toggleAddForm() {
+        const form = document.getElementById("add-form");
+        if (form.style.display === "none") {
+          form.style.display = "block";
+        } else {
+          form.style.display = "none";
+        }
+      }
+
+      function toggleUpdateForm() {
+        const form = document.getElementById("update-member-form");
+        form.style.display = form.style.display === "none" ? "block" : "none";
+      }
+
+      function toggleDeleteForm() {
+        const form = document.getElementById("delete-member-form");
+        form.style.display = form.style.display === "none" ? "block" : "none";
+      }
+
+      function deleteMember() {
+        const memberID = document
+          .getElementById("delete-member-id")
+          .value.trim();
+        if (!memberID) {
+          alert("Please enter a Member ID.");
+          return;
+        }
+
+        if (
+          !confirm(
+            `Are you sure you want to delete member ${memberID}? This action cannot be undone.`
+          )
+        ) {
+          return;
+        }
+
+        fetch(`/admin/delete_member/${memberID}`, {
+          method: "DELETE",
+          headers: { Authorization: session_token },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+              getMembers();
+            } else if (data.error) {
+              alert("Error: " + data.error);
+            }
+          })
+          .catch((err) => {
+            console.error("Error deleting member:", err);
+            alert("Failed to delete member.");
+          });
+      }
+
+      function updateMember() {
+        const memberID = document
+          .getElementById("update-member-id")
+          .value.trim();
+        const username = document
+          .getElementById("update-username")
+          .value.trim();
+        const email = document.getElementById("update-email").value.trim();
+        const dob = document.getElementById("update-dob").value;
+
+        if (!memberID) {
+          alert("Please enter a Member ID.");
+          return;
+        }
+
+        const updateData = {};
+        if (username) updateData.username = username;
+        if (email) updateData.emailid = email;
+        if (dob) updateData.dob = dob;
+
+        if (Object.keys(updateData).length === 0) {
+          alert("Please provide at least one field to update.");
+          return;
+        }
+
+        fetch(`/admin/update_member/${memberID}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: session_token,
+          },
+          body: JSON.stringify(updateData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+              getMembers();
+            } else if (data.error) {
+              alert("Error: " + data.error);
+            }
+          })
+          .catch((err) => {
+            console.error("Error updating member:", err);
+            alert("Failed to update member.");
+          });
+      }
+
+      function addMember() {
+        const username = document.getElementById("add-username").value.trim();
+        const email = document.getElementById("add-email").value.trim();
+        const dob = document.getElementById("add-dob").value;
+        const role = document.getElementById("add-role").value;
+        const image_link = document
+          .getElementById("add-image-link")
+          .value.trim();
+        const group_id = document.getElementById("add-group-id").value.trim();
+
+        if (!username || !email || !dob || !image_link || !group_id) {
+          alert("Please fill in all required fields.");
+          return;
+        }
+
+        const data = {
+          username,
+          emailid: email,
+          dob,
+          role,
+          image_link,
+          group_id,
+        };
+
+        fetch("/admin/add_member", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: session_token,
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+              getMembers(); // Refresh members list if available
+            } else if (data.error) {
+              alert("Error: " + data.error);
+            }
+          })
+          .catch((err) => {
+            console.error("Error adding member:", err);
+            alert("Failed to add member.");
+          });
+      }
+
+      function viewBankDetails() {
+        fetch("/show_bank_details")
+          .then((res) => res.text())
+          .then(
+            (html) =>
+              (document.getElementById("admin-content").innerHTML = html)
+          )
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("admin-content").innerHTML =
+              "<p style='color:red;'>Failed to load bank details.</p>";
+          });
+      }
+
+      function viewAlumniDetails() {
+        fetch("/show_alumni_details")
+          .then((res) => res.text())
+          .then(
+            (html) =>
+              (document.getElementById("admin-content").innerHTML = html)
+          )
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("admin-content").innerHTML =
+              "<p style='color:red;'>Failed to load bank details.</p>";
+          });
+      }
+
+      function viewStatsDetails() {
+        fetch("/show_stats_details")
+          .then((res) => res.text())
+          .then(
+            (html) =>
+              (document.getElementById("admin-content").innerHTML = html)
+          )
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("admin-content").innerHTML =
+              "<p style='color:red;'>Failed to load bank details.</p>";
+          });
+      }
+
+      function viewColleges() {
+        fetch("/show_colleges")
+          .then((res) => res.text())
+          .then(
+            (html) =>
+              (document.getElementById("admin-content").innerHTML = html)
+          )
+          .catch((err) => {
+            console.error("Error:", err);
+            document.getElementById("admin-content").innerHTML =
+              "<p style='color:red;'>Failed to load college details.</p>";
+          });
+      }
+    </script>
+  </body>
+</html>
